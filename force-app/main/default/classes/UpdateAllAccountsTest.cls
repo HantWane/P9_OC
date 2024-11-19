@@ -1,5 +1,5 @@
 @isTest
-private class testUpdateAllAccounts {
+private class UpdateAllAccountsTest {
 
     @isTest
     static void Should_UpdateAllAccountCA_When_OrderIsUpdated() {
@@ -11,8 +11,8 @@ private class testUpdateAllAccounts {
         insert new List<Account>{ account1, account2 };
         
         // Create test Orders linked to accounts with 'Ordered' status
-        Order order1 = new Order(AccountId = account1.Id, Status = 'Ordere', EffectiveDate = Date.today());
-        Order order2 = new Order(AccountId = account2.Id, Status = 'Ordere', EffectiveDate = Date.today());
+        Order order1 = new Order(AccountId = account1.Id, Status = 'Ordered', EffectiveDate = Date.today());
+        Order order2 = new Order(AccountId = account2.Id, Status = 'Ordered', EffectiveDate = Date.today());
         insert new List<Order>{ order1, order2 };
 
         // Step 2: Initialize and execute the batch
