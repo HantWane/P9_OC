@@ -23,15 +23,28 @@ private class testUpdateAccountCA {
         );
         insert pricebookEntry;
 
-      // Créer une commande de test
-      Order testOrder = new Order(
-        AccountId = acc1.Id,
-        EffectiveDate = Date.newInstance(2024, 10, 10), 
-        Status = 'Draft',
-        ShipmentCost__c = 50,
-        Pricebook2Id = Test.getStandardPricebookId()
-    );
-    insert testOrder;
+        // Créer une commande de test
+        Order testOrder = new Order(
+            AccountId = acc1.Id,
+            EffectiveDate = Date.newInstance(2024, 10, 10), 
+            Status = 'Ordered',
+            ShipmentCost__c = 50,
+            Pricebook2Id = Test.getStandardPricebookId()
+        );
+        insert testOrder;
+
+
+        // Créer 100 commandes
+        List<Order> orders = new List<Order>();
+        for (Integer i = 0; i < 100; i++) {
+            orders.add(new Order(
+                AccountId = acc1.Id,
+                EffectiveDate = Date.today(),
+                Status = 'Ordered',
+                Pricebook2Id = Test.getStandardPricebookId()
+        ));
+        }
+        insert orders;
 
         // Créer des OrderItems pour la commande
         List<OrderItem> orderItems = new List<OrderItem>();
@@ -113,4 +126,64 @@ private class testUpdateAccountCA {
         Assert.areEqual(expectedAcc1CA, updatedAcc1.Chiffre_d_affaire__c, 'Le chiffre d\'affaires du compte acc1 ne correspond pas à la valeur attendue.');
         Assert.areEqual(expectedAcc3CA, updatedAcc3.Chiffre_d_affaire__c, 'Le chiffre d\'affaires du compte acc3 ne devrait pas être modifié.');
     }  
+
+
+    @isTest
+    static void Should_UpdateAccountCA_when_101orders_are_Updated(){
+        Account acc1 = [SELECT Id, Chiffre_d_affaire__c FROM Account WHERE Name = 'Test Account 1' LIMIT 1];
+        Assert.areEqual(INITIAL_CHIFFRE_D_AFFAIRE, acc1.Chiffre_d_affaire__c, 'Le chiffre d\'affaires initial devrait être correct.');
+
+        List<Order> orders = [SELECT Id, TotalAmount FROM Order WHERE AccountId = :acc1.Id];
+        Assert.areEqual(101, orders.size(), 'Il devrait y avoir 101 commandes.');
+
+        for (Order order : orders){
+            order.Status = 'Ordered';
+        }
+
+        Test.startTest();
+        try {
+            update orders; // Cette mise à jour devrait déclencher une erreur de limites SOQL
+            System.assert(false, 'Une exception de gouvernance aurait dû être levée.');
+        } catch (System.LimitException e) {
+            System.assert(e.getMessage().contains('too many SOQL queries'), 'Le message d\'erreur ne contient pas "too many SOQL queries".');
+        }
+        Test.stopTest();
+    }
+
+    @isTest
+    static void Should_UpdateAccountCA_when_1orders_are_Added_and_101Orders_Existed(){
+        // Créer un compte avec un chiffre d'affaires initial
+        Account acc = new Account(Name = 'Test Account', Chiffre_d_affaire__c = 1000);
+        insert acc;
+        
+        // Ajouter 101 commandes au compte
+        List<Order> orders = new List<Order>();
+        for (Integer i = 0; i < 101; i++) {
+            Order order = new Order(
+                AccountId = acc.Id,
+                EffectiveDate = Date.today(),
+                Status = 'Ordered');
+            orders.add(order);
+        }
+        insert orders;
+
+        // Vérifier que le compte a 101 commandes (assertion avant d'ajouter la 102e)
+        System.assertEquals(101, [SELECT COUNT() FROM Order WHERE AccountId = :acc.Id], 'Le compte devrait avoir 101 commandes');
+
+        // Ajouter une nouvelle commande (la 102e commande)
+        Order newOrder = new Order(AccountId = acc.Id, EffectiveDate = Date.today(), Status = 'Ordered');
+        
+        Test.startTest();
+        try {
+            // Insertion de la 102e commande
+            insert newOrder;
+            // Vérifier le chiffre d'affaires du compte après l'ajout de la commande
+            Account accountAfter = [SELECT Id, Chiffre_d_affaire__c FROM Account WHERE Id = :acc.Id];
+            System.assertEquals(acc.Chiffre_d_affaire__c + newOrder.TotalAmount, accountAfter.Chiffre_d_affaire__c, 'Le chiffre d\'affaires devrait être mis à jour correctement');
+            } catch (System.LimitException e) {
+            // Vérifier que l'exception de dépassement de limites est levée
+            System.assert(e.getMessage().contains('too many SOQL queries'), 'Une exception de dépassement de limites SOQL aurait dû être levée');
+            }
+        Test.stopTest();
+        }
 }
