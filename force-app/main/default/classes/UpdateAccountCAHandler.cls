@@ -1,11 +1,21 @@
 public class UpdateAccountCAHandler {
 
-        // Méthode pour gérer l'insertion des commandes
+    // Méthode pour gérer l'insertion des commandes
     public static void handleAfterInsert(List<Order> orders) {
+        updateAccountRevenue(orders);
+    }
+
+    // Méthode pour gérer la mise à jour des commandes
+    public static void handleAfterUpdate(List<Order> orders) {
+        updateAccountRevenue(orders);
+    }
+
+    // Méthode pour gérer la suppression des commandes
+    public static void handleAfterDelete(List<Order> deletedOrders) {
         Set<Id> accountIds = new Set<Id>();
 
-        // Collecter tous les Ids des comptes associés aux commandes insérées
-        for (Order order : orders) {
+        // Collecter tous les Ids des comptes associés aux commandes supprimées
+        for (Order order : deletedOrders) {
             accountIds.add(order.AccountId);
         }
 
@@ -15,26 +25,25 @@ public class UpdateAccountCAHandler {
         for (Account acc : accountsToUpdate) {
             Decimal totalAmount = 0;
 
-            // Calculer le chiffre d'affaires total en fonction des commandes associées
-            for (Order order : orders) {
-                if (order.AccountId == acc.Id) {
-                    totalAmount += order.TotalAmount;
-                }
+            // Recalculer le chiffre d'affaires avec les commandes restantes
+            List<Order> remainingOrders = [SELECT TotalAmount FROM Order WHERE AccountId = :acc.Id];
+            for (Order remainingOrder : remainingOrders) {
+                totalAmount += remainingOrder.TotalAmount;
             }
 
-            // Mettre à jour le chiffre d'affaires du compte
-            acc.Chiffre_d_affaire__c += totalAmount;
+            // Si aucune commande restante, le chiffre d'affaires est défini à 0
+            acc.Chiffre_d_affaire__c = totalAmount;
         }
 
         // Mettre à jour les comptes
         update accountsToUpdate;
     }
 
-    // Méthode pour gérer la mise à jour des commandes
-    public static void handleAfterUpdate(List<Order> orders) {
+    // Méthode partagée pour gérer les insertions et mises à jour
+    private static void updateAccountRevenue(List<Order> orders) {
         Set<Id> accountIds = new Set<Id>();
 
-        // Collecter tous les Ids des comptes associés aux commandes mises à jour
+        // Collecter tous les Ids des comptes associés aux commandes
         for (Order order : orders) {
             accountIds.add(order.AccountId);
         }
@@ -46,14 +55,13 @@ public class UpdateAccountCAHandler {
             Decimal totalAmount = 0;
 
             // Calculer le chiffre d'affaires total en fonction des commandes associées
-            for (Order order : orders) {
-                if (order.AccountId == acc.Id) {
-                    totalAmount += order.TotalAmount;
-                }
+            List<Order> relatedOrders = [SELECT TotalAmount FROM Order WHERE AccountId = :acc.Id];
+            for (Order relatedOrder : relatedOrders) {
+                totalAmount += relatedOrder.TotalAmount;
             }
 
             // Mettre à jour le chiffre d'affaires du compte
-            acc.Chiffre_d_affaire__c += totalAmount;
+            acc.Chiffre_d_affaire__c = totalAmount;
         }
 
         // Mettre à jour les comptes

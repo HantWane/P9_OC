@@ -6,14 +6,18 @@ public class UpdateAccountRevenueBatch implements Database.Batchable<SObject> {
     }
 
     public Database.QueryLocator start(Database.BatchableContext bc) {
-        return Database.getQueryLocator([
-            SELECT Id, (SELECT NetAmount__c FROM Orders WHERE Status = 'Ordered')
-            FROM Account
-            WHERE Id IN :accountIds
-        ]);
+        System.debug('SOQL queries before start: ' + Limits.getQueries());
+        Database.QueryLocator queryLocator = Database.getQueryLocator([
+        SELECT Id, (SELECT NetAmount__c FROM Orders WHERE Status = 'Ordered')
+        FROM Account
+        WHERE Id IN :accountIds
+    ]);
+        System.debug('SOQL queries after start: ' + Limits.getQueries());
+        return queryLocator;
     }
 
     public void execute(Database.BatchableContext bc, List<SObject> scope) {
+        System.debug('SOQL queries before execute: ' + Limits.getQueries());
         List<Account> accountsToUpdate = new List<Account>();
 
         for (Account acc : (List<Account>)scope) {
@@ -30,6 +34,7 @@ public class UpdateAccountRevenueBatch implements Database.Batchable<SObject> {
         if (!accountsToUpdate.isEmpty()) {
             update accountsToUpdate;
         }
+        System.debug('SOQL queries after execute: ' + Limits.getQueries());
     }
 
     public void finish(Database.BatchableContext bc) {

@@ -1,29 +1,34 @@
-trigger CalculMontant on Order (before insert, before update, after update, after insert, after delete) {
+trigger CalculMontant on Order (before insert, before update, after insert, after update, after delete) {
+
     if (Trigger.isBefore) {
         if (Trigger.isInsert || Trigger.isUpdate) {
-            // Calcul du montant net des commandes
+            System.debug('SOQL queries before calculateNetAmount: ' + Limits.getQueries());
+            // Calcul du montant net des commandes avant l'insertion ou la mise à jour
             OrderHelper.calculateNetAmount(Trigger.new);
+            System.debug('SOQL queries after calculateNetAmount: ' + Limits.getQueries());
         }
     }
+
     if (Trigger.isAfter) {
-        if (Trigger.isInsert || Trigger.isUpdate || Trigger.isDelete) {
+        Set<Id> accountIds = new Set<Id>();
+
+        if (Trigger.isInsert || Trigger.isUpdate) {
+            for (Order o : Trigger.new) {
+                accountIds.add(o.AccountId);
+            }
+        }
+
+        if (Trigger.isDelete) {
+            for (Order o : Trigger.old) {
+                accountIds.add(o.AccountId);
+            }
+        }
+
+        if (!accountIds.isEmpty()) {
+            System.debug('SOQL queries before updateAccountRevenue: ' + Limits.getQueries());
             // Mise à jour du chiffre d'affaires des comptes
-            Set<Id> accountIds = new Set<Id>();
-
-            if (Trigger.isInsert || Trigger.isUpdate) {
-                for (Order o : Trigger.new) {
-                    accountIds.add(o.AccountId);
-                }
-            } else if (Trigger.isDelete) {
-                for (Order o : Trigger.old) {
-                    accountIds.add(o.AccountId);
-                }
-            }
-
-            if (!accountIds.isEmpty()) {
-                // Appel de la méthode de mise à jour via le batch
-                OrderHelper.updateAccountRevenue(accountIds);
-            }
+            OrderHelper.updateAccountRevenue(accountIds);
+            System.debug('SOQL queries after updateAccountRevenue: ' + Limits.getQueries());
         }
     }
 }

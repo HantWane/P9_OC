@@ -23,7 +23,9 @@ public class OrderHelper {
     }
 
     public static void updateAccountRevenue(Set<Id> accountIds) {
+        System.debug('SOQL queries before updateAccountRevenue: ' + Limits.getQueries());
         // Appel d'un batch pour mettre à jour les chiffres d'affaires
         Database.executeBatch(new UpdateAccountRevenueBatch(accountIds));
+        System.debug('SOQL queries after updateAccountRevenue update: ' + Limits.getQueries());
     }
 }
