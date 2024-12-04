@@ -60,9 +60,10 @@ public class CalculMontantTest {
             new OrderItem(OrderId = order2.Id, PricebookEntryId = pricebookEntry.Id, Quantity = 2, UnitPrice = 250)
         };
         insert orderItems2;
+        update order2;
         System.debug('OrderItems pour la commande 2 : ' + orderItems2);
         System.debug('NetAmount__c pour Commande 2 après ajout des OrderItems : ' + order2.NetAmount__c);
-        update order2;
+        
 
         // Étape 6 : Vérification des calculs de montant net sur les commandes
         order1 = [SELECT Id, NetAmount__c, TotalAmount FROM Order WHERE Id = :order1.Id];
@@ -146,6 +147,86 @@ public class CalculMontantTest {
         // Vérification que le chiffre d'affaires est mis à jour après suppression
         Account updatedAccount = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
         System.debug('Chiffre d\'affaires après suppression : ' + updatedAccount.Chiffre_d_affaire__c);
-        Assert.areEqual(null, updatedAccount.Chiffre_d_affaire__c, 'Le chiffre d\'affaires après suppression est incorrect.');
+        Assert.areEqual(0, updatedAccount.Chiffre_d_affaire__c, 'Le chiffre d\'affaires après suppression est incorrect.');
     }
+
+    @isTest
+    static void testUpdateAccountWith101Orders() {
+        // Étape 1 : Création d'un compte pour tester les commandes
+        Account testAccount = new Account(Name = 'Test Account');
+        insert testAccount;
+        System.debug('Compte créé : ' + testAccount);
+
+        // Étape 2 : Création d'un produit
+        Product2 product = new Product2(Name = 'Test Product', IsActive = true);
+        insert product;
+        System.debug('Produit créé : ' + product);
+
+        // Étape 3 : Création d'une entrée dans le Pricebook
+        PricebookEntry pricebookEntry = new PricebookEntry(
+            Pricebook2Id = Test.getStandardPricebookId(),
+            Product2Id = product.Id,
+            UnitPrice = 100,
+            IsActive = true
+        );
+        insert pricebookEntry;
+        System.debug('PricebookEntry créé : ' + pricebookEntry);
+
+        // Étape 4 : Création de 101 commandes avec des items
+        List<Order> orders = new List<Order>();
+        List<OrderItem> orderItems = new List<OrderItem>();
+
+        for (Integer i = 0; i < 101; i++) {
+            Order order = new Order(
+                AccountId = testAccount.Id,
+                Status = 'Ordered',
+                EffectiveDate = Date.today(),
+                ShipmentCost__c = 10,
+                Pricebook2Id = Test.getStandardPricebookId()
+            );
+            orders.add(order);
+        }
+        insert orders;
+        System.debug('101 commandes créées.');
+
+        for (Order order : orders) {
+            OrderItem orderItem = new OrderItem(
+                OrderId = order.Id,
+                PricebookEntryId = pricebookEntry.Id,
+                Quantity = 1,
+                UnitPrice = 100
+            );
+            orderItems.add(orderItem);
+        }
+        insert orderItems;
+        System.debug('OrderItems ajoutés aux 101 commandes.');
+        update testAccount;
+
+        // Étape 5 : Vérification des calculs de montant net sur les commandes
+        Decimal totalNetAmount = 0;
+        for (Order order : orders) {
+            order = [SELECT Id, NetAmount__c FROM Order WHERE Id = :order.Id];
+            totalNetAmount += order.NetAmount__c;
+            System.debug('Montant net de la commande ' + order.Id + ' : ' + order.NetAmount__c);
+        }
+
+        Decimal expectedTotalNetAmount = 101 * (100 - 10); // 101 * (100 - 10)
+        System.debug('Montant net total attendu : ' + expectedTotalNetAmount);
+        System.debug('Montant net total réel : ' + totalNetAmount);
+
+        Assert.areEqual(expectedTotalNetAmount, totalNetAmount, 'Le montant net total pour les 101 commandes est incorrect.');
+
+        // Simulation du batch
+        Test.startTest();
+        Database.executeBatch(new UpdateAccountRevenueBatch(new Set<Id>{testAccount.Id}));
+        Test.stopTest();
+
+        // Étape 6 : Vérification de la mise à jour du chiffre d'affaires sur le compte
+        Account updatedAccount = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
+        System.debug('Chiffre d\'affaires attendu : ' + expectedTotalNetAmount);
+        System.debug('Chiffre d\'affaires réel : ' + updatedAccount.Chiffre_d_affaire__c);
+
+        Assert.areEqual(expectedTotalNetAmount, updatedAccount.Chiffre_d_affaire__c, 'Le chiffre d\'affaires du compte est incorrect.');
+    }
+
 }

@@ -4,7 +4,7 @@ trigger CalculMontant on Order (before insert, before update, after insert, afte
         if (Trigger.isInsert || Trigger.isUpdate) {
             System.debug('SOQL queries before calculateNetAmount: ' + Limits.getQueries());
             // Calcul du montant net des commandes avant l'insertion ou la mise à jour
-            OrderHelper.calculateNetAmount(Trigger.new);
+            // OrderHelper.calculateNetAmount(Trigger.new);
             System.debug('SOQL queries after calculateNetAmount: ' + Limits.getQueries());
         }
     }
@@ -13,6 +13,7 @@ trigger CalculMontant on Order (before insert, before update, after insert, afte
         Set<Id> accountIds = new Set<Id>();
 
         if (Trigger.isInsert || Trigger.isUpdate) {
+            OrderHelper.calculateNetAmount(Trigger.new);
             for (Order o : Trigger.new) {
                 accountIds.add(o.AccountId);
             }

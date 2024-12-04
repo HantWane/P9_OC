@@ -8,10 +8,11 @@ public class UpdateAccountRevenueBatch implements Database.Batchable<SObject> {
     public Database.QueryLocator start(Database.BatchableContext bc) {
         System.debug('SOQL queries before start: ' + Limits.getQueries());
         Database.QueryLocator queryLocator = Database.getQueryLocator([
-        SELECT Id, (SELECT NetAmount__c FROM Orders WHERE Status = 'Ordered')
-        FROM Account
-        WHERE Id IN :accountIds
-    ]);
+            SELECT Id, Chiffre_d_affaire__c
+            // mettre les champs dans le select TO DO 
+            FROM Account
+            WHERE Id IN :accountIds
+        ]);
         System.debug('SOQL queries after start: ' + Limits.getQueries());
         return queryLocator;
     }
@@ -19,14 +20,26 @@ public class UpdateAccountRevenueBatch implements Database.Batchable<SObject> {
     public void execute(Database.BatchableContext bc, List<SObject> scope) {
         System.debug('SOQL queries before execute: ' + Limits.getQueries());
         List<Account> accountsToUpdate = new List<Account>();
+        Set<Id> accountIdsInScope = new Set<Id>();
 
-        for (Account acc : (List<Account>)scope) {
-            Decimal totalRevenue = 0;
+        for (SObject sObj : scope) {
+            accountIdsInScope.add(sObj.Id);
+        }
 
-            for (Order o : acc.Orders) {
-                totalRevenue += (o.NetAmount__c != null ? o.NetAmount__c : 0);
-            }
+        // Requête pour obtenir le total des revenus pour chaque compte
+        Map<Id, Decimal> accountRevenueMap = new Map<Id, Decimal>();
+        for (AggregateResult ar : [
+            SELECT AccountId, SUM(NetAmount__c) totalRevenue
+            FROM Order
+            WHERE AccountId IN :accountIdsInScope AND Status = 'Ordered'
+            GROUP BY AccountId
+        ]) {
+            accountRevenueMap.put((Id)ar.get('AccountId'), (Decimal)ar.get('totalRevenue'));
+        }
 
+        for (SObject sObj : scope) {
+            Account acc = (Account)sObj;
+            Decimal totalRevenue = accountRevenueMap.containsKey(acc.Id) ? accountRevenueMap.get(acc.Id) : 0;
             acc.Chiffre_d_affaire__c = totalRevenue;
             accountsToUpdate.add(acc);
         }

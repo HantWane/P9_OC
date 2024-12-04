@@ -2,16 +2,19 @@ public class UpdateAccountCAHandler {
 
     // Méthode pour gérer l'insertion des commandes
     public static void handleAfterInsert(List<Order> orders) {
+        System.debug('Handling after insert for orders: ' + orders);
         updateAccountRevenue(orders);
     }
 
     // Méthode pour gérer la mise à jour des commandes
     public static void handleAfterUpdate(List<Order> orders) {
+        System.debug('Handling after update for orders: ' + orders);
         updateAccountRevenue(orders);
     }
 
     // Méthode pour gérer la suppression des commandes
     public static void handleAfterDelete(List<Order> deletedOrders) {
+        System.debug('Handling after delete for orders: ' + deletedOrders);
         Set<Id> accountIds = new Set<Id>();
 
         // Collecter tous les Ids des comptes associés aux commandes supprimées
@@ -33,6 +36,7 @@ public class UpdateAccountCAHandler {
 
             // Si aucune commande restante, le chiffre d'affaires est défini à 0
             acc.Chiffre_d_affaire__c = totalAmount;
+            System.debug('Updating account ' + acc.Id + ' with totalAmount: ' + totalAmount);
         }
 
         // Mettre à jour les comptes
@@ -41,6 +45,7 @@ public class UpdateAccountCAHandler {
 
     // Méthode partagée pour gérer les insertions et mises à jour
     private static void updateAccountRevenue(List<Order> orders) {
+        System.debug('Updating account revenue for orders: ' + orders);
         Set<Id> accountIds = new Set<Id>();
 
         // Collecter tous les Ids des comptes associés aux commandes
@@ -60,8 +65,9 @@ public class UpdateAccountCAHandler {
                 totalAmount += relatedOrder.TotalAmount;
             }
 
-            // Mettre à jour le chiffre d'affaires du compte
-            acc.Chiffre_d_affaire__c = totalAmount;
+            // Mettre à jour le chiffre d'affaires avec une valeur par défaut de 0 si nécessaire
+            acc.Chiffre_d_affaire__c = totalAmount == null ? 0 : totalAmount;
+            System.debug('Updating account ' + acc.Id + ' with totalAmount: ' + totalAmount);
         }
 
         // Mettre à jour les comptes
