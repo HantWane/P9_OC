@@ -14,7 +14,7 @@ public class OrderHelper {
             }
         }
 
-        List<Order> orders = [SELECT Id, Status, EffectiveDate, AccountId, ShipmentCost__c, Pricebook2Id, NetAmount__c, totalAmount FROM Order WHERE Id IN :orderIds];
+        //  List<Order> orders = [SELECT Id, Status, EffectiveDate, AccountId, ShipmentCost__c, Pricebook2Id, NetAmount__c, totalAmount FROM Order WHERE Id IN :orderIds];
 
         // Effectuer une seule requête SOQL pour tous les OrderItem
         List<OrderItem> orderItems = [SELECT OrderId, Quantity, UnitPrice FROM OrderItem WHERE OrderId IN :orderIds];
@@ -29,27 +29,21 @@ public class OrderHelper {
         }
 
         // Calculer le montant net pour chaque commande
-        for (Order o : orders) {
-            if (o.Status == 'Ordered') {
-                List<OrderItem> items = orderItemMap.get(o.Id);
-                if (items != null) {
-                    Decimal totalAmount = 0;
-                    for (OrderItem item : items) {
-                        totalAmount += item.Quantity * item.UnitPrice;
-                    }
-                    Decimal shipmentCost = o.ShipmentCost__c != null ? o.ShipmentCost__c : 0;
-                    o.NetAmount__c = totalAmount - shipmentCost;
-                }
-            } else {
-                o.NetAmount__c = null; // Si le statut n'est pas "Ordered", le montant net est null
+        for (Order currentOrder : newOrders) {
+            if (currentOrder.Status != 'Ordered') {
+                currentOrder.NetAmount__c = null;
+                continue;
             }
+
+            computNetAmount(currentOrder, orderItemMap.get(currentOrder.Id));
+            
         }
         HasRunOnce = true;
-        update orders;
+        // update orders;
 
-        // Forcer une mise à jour "vide" pour déclencher les déclencheurs et workflows
-        List<Order> ordersToUpdate = [SELECT Id FROM Order WHERE Id IN :orderIds];
-        update ordersToUpdate;
+        // // Forcer une mise à jour "vide" pour déclencher les déclencheurs et workflows
+        // List<Order> ordersToUpdate = [SELECT Id FROM Order WHERE Id IN :orderIds];
+        // update ordersToUpdate;
 
     }
 
@@ -58,5 +52,20 @@ public class OrderHelper {
         // Appel d'un batch pour mettre à jour les chiffres d'affaires
         Database.executeBatch(new UpdateAccountRevenueBatch(accountIds));
         System.debug('SOQL queries after updateAccountRevenue update: ' + Limits.getQueries());
+    }
+
+    @testVisible
+    public static void computNetAmount(Order myOrder, List<OrderItem> items) {
+        Decimal shipmentCost = myOrder.ShipmentCost__c != null ? myOrder.ShipmentCost__c : 0;
+        if (items == null || items.isEmpty()) {
+            myOrder.NetAmount__c = 0 - shipmentCost;
+            return;
+        }
+        
+        Decimal totalAmount = 0;
+        for (OrderItem item : items) {
+            totalAmount += item.Quantity * item.UnitPrice;
+        }
+        myOrder.NetAmount__c = totalAmount - shipmentCost;
     }
 }

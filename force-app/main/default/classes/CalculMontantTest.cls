@@ -67,7 +67,7 @@ public class CalculMontantTest {
 
         // Étape 6 : Vérification des calculs de montant net sur les commandes
         order1 = [SELECT Id, NetAmount__c, TotalAmount FROM Order WHERE Id = :order1.Id];
-        order2 = [SELECT Id, NetAmount__c FROM Order WHERE Id = :order2.Id];
+        order2 = [SELECT Id, NetAmount__c, TotalAmount FROM Order WHERE Id = :order2.Id];
         System.debug('total amount order 1:' + order1.TotalAmount);
         System.debug('Montant net de la commande 1 : ' + order1.NetAmount__c);
         System.debug('Montant net de la commande 2 : ' + order2.NetAmount__c);
@@ -202,19 +202,19 @@ public class CalculMontantTest {
         System.debug('OrderItems ajoutés aux 101 commandes.');
         update testAccount;
 
-        // Étape 5 : Vérification des calculs de montant net sur les commandes
-        Decimal totalNetAmount = 0;
+        // // Étape 5 : Vérification des calculs de montant net sur les commandes
+        Decimal TotalAmount = 0;
         for (Order order : orders) {
-            order = [SELECT Id, NetAmount__c FROM Order WHERE Id = :order.Id];
-            totalNetAmount += order.NetAmount__c;
+            order = [SELECT Id, totalAmount, NetAmount__c FROM Order WHERE Id = :order.Id];
+            TotalAmount += order.NetAmount__c;
             System.debug('Montant net de la commande ' + order.Id + ' : ' + order.NetAmount__c);
-        }
+        
 
-        Decimal expectedTotalNetAmount = 101 * (100 - 10); // 101 * (100 - 10)
-        System.debug('Montant net total attendu : ' + expectedTotalNetAmount);
-        System.debug('Montant net total réel : ' + totalNetAmount);
+        Decimal expectedTotalAmount = 101 * (100 - 10); // 101 * (100 - 10)
+        System.debug('Montant net total attendu : ' + expectedTotalAmount);
+        System.debug('Montant net total réel : ' + TotalAmount);
 
-        Assert.areEqual(expectedTotalNetAmount, totalNetAmount, 'Le montant net total pour les 101 commandes est incorrect.');
+        Assert.areEqual(expectedTotalAmount, TotalAmount, 'Le montant net total pour les 101 commandes est incorrect.');
 
         // Simulation du batch
         Test.startTest();
@@ -222,11 +222,82 @@ public class CalculMontantTest {
         Test.stopTest();
 
         // Étape 6 : Vérification de la mise à jour du chiffre d'affaires sur le compte
-        Account updatedAccount = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
-        System.debug('Chiffre d\'affaires attendu : ' + expectedTotalNetAmount);
+        Account updatedAccount = [SELECT Id, Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
+        System.debug('Chiffre d\'affaires attendu : ' + expectedTotalAmount);
         System.debug('Chiffre d\'affaires réel : ' + updatedAccount.Chiffre_d_affaire__c);
 
-        Assert.areEqual(expectedTotalNetAmount, updatedAccount.Chiffre_d_affaire__c, 'Le chiffre d\'affaires du compte est incorrect.');
+        Assert.areEqual(expectedTotalAmount, updatedAccount.Chiffre_d_affaire__c, 'Le chiffre d\'affaires du compte est incorrect.');
+    }
+}
+
+    @isTest
+    static void testComputNetAmount() {
+    
+        // Étape 4 : Création de la première commande avec des items
+        Order order1 = new Order(
+            Status = 'Ordered',
+            EffectiveDate = Date.today(),
+            ShipmentCost__c = 50
+        );
+        System.debug('Commande 1 créée : ' + order1);
+        
+
+        // Ajout d'OrderItems à la commande
+        List<OrderItem> orderItems1 = new List<OrderItem>{
+            new OrderItem(Quantity = 2, UnitPrice = 100),
+            new OrderItem(Quantity = 1, UnitPrice = 150)
+        };
+        System.debug('OrderItems pour la commande 1 : ' + orderItems1);
+
+        OrderHelper.computNetAmount(order1, orderItems1);
+        Assert.areEqual(300, order1.NetAmount__c);
+    }
+
+    @isTest
+    static void testComputNetAmountwithNoOrderItems() {
+
+        // Création de la première commande avec des items
+        Order order1 = new Order(
+            Status = 'Ordered',
+            EffectiveDate = Date.today(),
+            ShipmentCost__c = 50
+        );
+        System.debug('Commande 1 créée : ' + order1);
+        
+
+        // Ajout d'OrderItems à la commande
+        List<OrderItem> orderItems1 = new List<OrderItem>{
+            new OrderItem(Quantity = 0, UnitPrice = 100),
+            new OrderItem(Quantity = 0, UnitPrice = 150)
+        };
+        System.debug('OrderItems pour la commande 1 : ' + orderItems1);
+
+        OrderHelper.computNetAmount(order1, orderItems1);
+        Assert.areEqual(-50, order1.NetAmount__c);
+    }
+
+        @isTest
+    static void testComputNetAmountWithEmptyOrderItems() {
+        // Étape 1 : Création de la commande sans items
+        Order order = new Order(
+            Status = 'Ordered',
+            EffectiveDate = Date.today(),
+            ShipmentCost__c = 50
+        );
+        System.debug('Commande créée : ' + order);
+
+        // Étape 2 : Liste vide d'OrderItems
+        List<OrderItem> orderItems = new List<OrderItem>();
+        System.debug('OrderItems pour la commande : ' + orderItems);
+
+        // Étape 3 : Appel de la méthode computNetAmount
+        OrderHelper.computNetAmount(order, orderItems);
+
+        // Étape 4 : Vérification du montant net calculé
+        Decimal expectedNetAmount = 0 - 50; // -50
+        System.debug('Montant net attendu : ' + expectedNetAmount);
+        System.debug('Montant net calculé : ' + order.NetAmount__c);
+        Assert.areEqual(expectedNetAmount, order.NetAmount__c, 'Le montant net calculé est incorrect.');
     }
 
 }
