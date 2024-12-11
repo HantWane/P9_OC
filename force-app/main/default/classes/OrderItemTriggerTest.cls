@@ -44,7 +44,7 @@ public class OrderItemTriggerTest {
         Decimal expectedNetAmount = (2 * 100 + 1 * 150) - 50; // 200 + 150 - 50 = 300
         System.debug('Montant net attendu : ' + expectedNetAmount);
         System.debug('Montant net calculé : ' + order.NetAmount__c);
-        System.assertEquals(expectedNetAmount, order.NetAmount__c, 'Le montant net calculé est incorrect.');
+        Assert.areEqual(expectedNetAmount, order.NetAmount__c, 'Le montant net calculé est incorrect.');
     }
 
     @isTest
@@ -67,7 +67,7 @@ public class OrderItemTriggerTest {
         Decimal expectedNetAmount = 0 - 50; // -50
         System.debug('Montant net attendu : ' + expectedNetAmount);
         System.debug('Montant net calculé : ' + order.NetAmount__c);
-        System.assertEquals(expectedNetAmount, order.NetAmount__c, 'Le montant net calculé est incorrect.');
+        Assert.areEqual(expectedNetAmount, order.NetAmount__c, 'Le montant net calculé est incorrect.');
     }
 
     @isTest
@@ -118,7 +118,7 @@ public class OrderItemTriggerTest {
         Decimal expectedNetAmount = (3 * 100 + 1 * 200) - 50; // 300 + 200 - 50 = 450
         System.debug('Montant net attendu : ' + expectedNetAmount);
         System.debug('Montant net calculé : ' + order.NetAmount__c);
-        System.assertEquals(expectedNetAmount, order.NetAmount__c, 'Le montant net calculé est incorrect.');
+        Assert.areEqual(expectedNetAmount, order.NetAmount__c, 'Le montant net calculé est incorrect.');
     }
 
     @isTest
@@ -167,6 +167,6 @@ public class OrderItemTriggerTest {
         Decimal expectedNetAmount = (1 * 150) - 50; // 150 - 50 = 100
         System.debug('Montant net attendu : ' + expectedNetAmount);
         System.debug('Montant net calculé : ' + order.NetAmount__c);
-        System.assertEquals(expectedNetAmount, order.NetAmount__c, 'Le montant net calculé est incorrect.');
+        Assert.areEqual(expectedNetAmount, order.NetAmount__c, 'Le montant net calculé est incorrect.');
     }
 }
