@@ -1,64 +1,35 @@
-public class UpdateAccountRevenueBatch implements Database.Batchable<SObject> {
-    private Set<Id> accountIds;
+global class UpdateAccountRevenueBatch implements Database.Batchable<sObject> {
 
-    public UpdateAccountRevenueBatch(Set<Id> accountIds) {
-        this.accountIds = accountIds;
+    global Database.QueryLocator start(Database.BatchableContext BC) {
+        // Query all accounts
+        return Database.getQueryLocator([SELECT Id, (SELECT TotalAmount FROM Orders) FROM Account]);
     }
 
-    public Database.QueryLocator start(Database.BatchableContext bc) {
-        System.debug('SOQL queries before start: ' + Limits.getQueries());
-        System.debug('Account IDs to process: ' + accountIds);
-        Database.QueryLocator queryLocator = Database.getQueryLocator([
-            SELECT Id, Chiffre_d_affaire__c
-            FROM Account
-            WHERE Id IN :accountIds
-        ]);
-        System.debug('SOQL queries after start: ' + Limits.getQueries());
-        return queryLocator;
-    }
+    global void execute(Database.BatchableContext BC, List<Account> scope) {
+        // Map to store the total amount for each account
+        Map<Id, Decimal> accountTotalAmountMap = new Map<Id, Decimal>();
 
-    public void execute(Database.BatchableContext bc, List<SObject> scope) {
-        System.debug('SOQL queries before execute: ' + Limits.getQueries());
-        System.debug('Scope size: ' + scope.size());
+        // Iterate over the accounts and their related orders
+        for (Account acc : scope) {
+            Decimal totalAmount = 0;
+            for (Order ord : acc.Orders) {
+                totalAmount += ord.TotalAmount;
+            }
+            accountTotalAmountMap.put(acc.Id, totalAmount);
+        }
 
+        // Update the Chiffre_d_affaire__c field for each account
         List<Account> accountsToUpdate = new List<Account>();
-        Set<Id> accountIdsInScope = new Set<Id>();
-
-        for (SObject sObj : scope) {
-            accountIdsInScope.add(sObj.Id);
-        }
-
-        System.debug('Account IDs in scope: ' + accountIdsInScope);
-
-        // Requête pour obtenir le total des revenus pour chaque compte
-        Map<Id, Decimal> accountRevenueMap = new Map<Id, Decimal>();
-        for (AggregateResult ar : [
-            SELECT AccountId, SUM(NetAmount__c) totalRevenue
-            FROM Order
-            WHERE AccountId IN :accountIdsInScope AND Status = 'Ordered'
-            GROUP BY AccountId
-        ]) {
-            accountRevenueMap.put((Id)ar.get('AccountId'), (Decimal)ar.get('totalRevenue'));
-        }
-
-        System.debug('Account Revenue Map: ' + accountRevenueMap);
-
-        for (SObject sObj : scope) {
-            Account acc = (Account)sObj;
-            Decimal totalRevenue = accountRevenueMap.containsKey(acc.Id) ? accountRevenueMap.get(acc.Id) : 0;
-            System.debug('Account Id: ' + acc.Id + ', Initial Chiffre_d_affaire__c: ' + acc.Chiffre_d_affaire__c + ', Calculated Total Revenue: ' + totalRevenue);
-            acc.Chiffre_d_affaire__c = totalRevenue;
+        for (Id accountId : accountTotalAmountMap.keySet()) {
+            Account acc = new Account(Id = accountId, Chiffre_d_affaire__c = accountTotalAmountMap.get(accountId));
             accountsToUpdate.add(acc);
         }
 
         if (!accountsToUpdate.isEmpty()) {
-            System.debug('Updating accounts: ' + accountsToUpdate);
             update accountsToUpdate;
         }
-        System.debug('SOQL queries after execute: ' + Limits.getQueries());
     }
 
-    public void finish(Database.BatchableContext bc) {
-        System.debug('Batch finished');
+    global void finish(Database.BatchableContext BC) {
     }
 }

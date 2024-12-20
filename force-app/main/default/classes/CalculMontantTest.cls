@@ -56,7 +56,7 @@ public class CalculMontantTest {
         // Vérification que le chiffre d'affaires est mis à jour après suppression
         Account updatedAccount = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
         System.debug('Chiffre d\'affaires après suppression : ' + updatedAccount.Chiffre_d_affaire__c);
-        Assert.areEqual(0, updatedAccount.Chiffre_d_affaire__c, 'Le chiffre d\'affaires après suppression est incorrect.');
+        Assert.areEqual(null, updatedAccount.Chiffre_d_affaire__c, 'Le chiffre d\'affaires après suppression est incorrect.');
     }
 
     

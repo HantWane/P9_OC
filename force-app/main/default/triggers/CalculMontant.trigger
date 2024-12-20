@@ -1,36 +1,35 @@
-trigger OrderItemTrigger on OrderItem (after insert, after update, after delete) {
-    // Déclarer un ensemble pour stocker les IDs des commandes à mettre à jour
-    Set<Id> orderIds = new Set<Id>();
+trigger CalculMontant on Order (before insert, before update, after insert, after update, after delete) {
 
-    // Parcourir les OrderItems insérés ou mis à jour
-    if (Trigger.isInsert || Trigger.isUpdate) {
-        for (OrderItem item : Trigger.new) {
-            if (item.OrderId != null) {
-                orderIds.add(item.OrderId);
-            }
+    if (Trigger.isBefore) {
+        if (Trigger.isInsert || Trigger.isUpdate) {
+            System.debug('SOQL queries before calculateNetAmount: ' + Limits.getQueries());
+            // Calcul du montant net des commandes avant l'insertion ou la mise à jour
+            OrderHelper.calculateNetAmount(Trigger.new);
+            System.debug('SOQL queries after calculateNetAmount: ' + Limits.getQueries());
         }
     }
 
-    // Parcourir les OrderItems supprimés
-    if (Trigger.isDelete) {
-        for (OrderItem item : Trigger.old) {
-            if (item.OrderId != null) {
-                orderIds.add(item.OrderId);
+    if (Trigger.isAfter) {
+        Set<Id> accountIds = new Set<Id>();
+
+        if (Trigger.isInsert || Trigger.isUpdate) {
+           //  OrderHelper.calculateNetAmount(Trigger.new);
+            for (Order o : Trigger.new) {
+                accountIds.add(o.AccountId);
             }
         }
-    }
 
-    // Si des commandes doivent être mises à jour
-    if (!orderIds.isEmpty()) {
-        // Récupérer les commandes associées
-        List<Order> ordersToUpdate = [SELECT Id, ShipmentCost__c, (SELECT Quantity, UnitPrice FROM OrderItems) FROM Order WHERE Id IN :orderIds];
-
-        // Mettre à jour le montant net pour chaque commande
-        for (Order order : ordersToUpdate) {
-            OrderHelper.computNetAmount(order, order.OrderItems);
+        if (Trigger.isDelete) {
+            for (Order o : Trigger.old) {
+                accountIds.add(o.AccountId);
+            }
         }
 
-        // Mettre à jour les commandes dans la base de données
-        update ordersToUpdate;
+        if (!accountIds.isEmpty()) {
+            System.debug('SOQL queries before updateAccountRevenue: ' + Limits.getQueries());
+            // Mise à jour du chiffre d'affaires des comptes
+            OrderHelper.updateAccountRevenue(accountIds);
+            System.debug('SOQL queries after updateAccountRevenue: ' + Limits.getQueries());
+        }
     }
 }

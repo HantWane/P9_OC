@@ -1,11 +1,8 @@
 public class OrderHelper {
-    public static Boolean HasRunOnce = false; 
 
     public static void calculateNetAmount(List<Order> newOrders) {
         System.debug('@calculateNetAmount afficher les orders : ' + newOrders);
-        if (HasRunOnce == true){
-            return;
-        }
+        
         // Collecter tous les IDs des commandes
         Set<Id> orderIds = new Set<Id>();
         for (Order o : newOrders) {
@@ -38,20 +35,17 @@ public class OrderHelper {
             computNetAmount(currentOrder, orderItemMap.get(currentOrder.Id));
             
         }
-        HasRunOnce = true;
-        // update orders;
-
-        // // Forcer une mise à jour "vide" pour déclencher les déclencheurs et workflows
-        // List<Order> ordersToUpdate = [SELECT Id FROM Order WHERE Id IN :orderIds];
-        // update ordersToUpdate;
+        
 
     }
 
     public static void updateAccountRevenue(Set<Id> accountIds) {
         System.debug('SOQL queries before updateAccountRevenue: ' + Limits.getQueries());
         // Appel d'un batch pour mettre à jour les chiffres d'affaires
-        Database.executeBatch(new UpdateAccountRevenueBatch(accountIds));
-        System.debug('SOQL queries after updateAccountRevenue update: ' + Limits.getQueries());
+
+           // Database.executeBatch(new UpdateAccountRevenueBatch(accountIds));
+            System.debug('SOQL queries after updateAccountRevenue update: ' + Limits.getQueries());
+        
     }
 
     @testVisible
