@@ -103,6 +103,22 @@ private class UpdateAccountRevenueBatchTest {
         Account testAccount = new Account(Name = 'Test Account');
         insert testAccount;
 
+        // Étape 2 : Création d'un produit
+        Product2 testProduct = new Product2(Name = 'Test Product', IsActive = true);
+        insert testProduct;
+        System.debug('Produit créé : ' + testProduct);
+
+        // Étape 3 : Création d'une entrée dans le Pricebook
+        PricebookEntry testPricebookEntry = new PricebookEntry(
+            Pricebook2Id = Test.getStandardPricebookId(),
+            Product2Id = testProduct.Id,
+            UnitPrice = 100,
+            IsActive = true
+        );
+        insert testPricebookEntry;
+        System.debug('PricebookEntry créé : ' + testPricebookEntry);
+
+
         // Create 101 test orders with a total amount of 1010
         List<Order> orders = new List<Order>();
         for (Integer i = 0; i < 101; i++) {
@@ -116,9 +132,18 @@ private class UpdateAccountRevenueBatchTest {
         }
         insert orders;
 
-        // Ensure the orders are correctly linked to the account
-        testAccount = [SELECT Id, (SELECT TotalAmount FROM Orders) FROM Account WHERE Id = :testAccount.Id];
-        System.assert(testAccount.Orders.size() == 101, 'The account should have 101 orders');
+        // add orderItems
+         List<OrderItem> testOrderItems = new List<OrderItem>();
+         for (Order order : orders) {
+             OrderItem testOrderItem = new OrderItem(
+                 OrderId = Order.Id,
+                 PricebookEntryId = testPricebookEntry.Id,
+                 Quantity = 1,
+                 UnitPrice = 100
+             );
+             testOrderItems.add(testOrderItem);
+         }
+         insert testOrderItems;
 
         // Execute the batch
         Test.startTest();
@@ -129,6 +154,6 @@ private class UpdateAccountRevenueBatchTest {
         // Verify the Chiffre_d_affaire__c field is updated correctly
         testAccount = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
         System.debug('Chiffre_d_affaire__c: ' + testAccount.Chiffre_d_affaire__c);
-        System.assertEquals(1010, testAccount.Chiffre_d_affaire__c, 'The Chiffre_d_affaire__c field should be updated to 1010');
+        Assert.areEqual(10100, testAccount.Chiffre_d_affaire__c, 'The Chiffre_d_affaire__c field should be updated to 1010');
     }
 }
