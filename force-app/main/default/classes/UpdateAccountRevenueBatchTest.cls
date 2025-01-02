@@ -97,63 +97,97 @@ private class UpdateAccountRevenueBatchTest {
     //     System.assertEquals(totalCA, updatedAcc1.Chiffre_d_affaire__c, 'Le chiffre d\'affaires du compte acc1 n\'a pas été mis à jour correctement.');
     // }
 
-    @isTest
-    static void testBatchWith101Orders() {
-        // Create a test account
-        Account testAccount = new Account(Name = 'Test Account');
-        insert testAccount;
+    // @isTest
+    // static void testBatchWith101Orders() {
+    //     // Create a test account
+    //     Account testAccount = new Account(Name = 'Test Account');
+    //     insert testAccount;
 
-        // Étape 2 : Création d'un produit
-        Product2 testProduct = new Product2(Name = 'Test Product', IsActive = true);
-        insert testProduct;
-        System.debug('Produit créé : ' + testProduct);
+    //     // Étape 2 : Création d'un produit
+    //     Product2 testProduct = new Product2(Name = 'Test Product', IsActive = true);
+    //     insert testProduct;
+    //     System.debug('Produit créé : ' + testProduct);
 
-        // Étape 3 : Création d'une entrée dans le Pricebook
-        PricebookEntry testPricebookEntry = new PricebookEntry(
-            Pricebook2Id = Test.getStandardPricebookId(),
-            Product2Id = testProduct.Id,
-            UnitPrice = 100,
-            IsActive = true
-        );
-        insert testPricebookEntry;
-        System.debug('PricebookEntry créé : ' + testPricebookEntry);
+    //     // Étape 3 : Création d'une entrée dans le Pricebook
+    //     PricebookEntry testPricebookEntry = new PricebookEntry(
+    //         Pricebook2Id = Test.getStandardPricebookId(),
+    //         Product2Id = testProduct.Id,
+    //         UnitPrice = 100,
+    //         IsActive = true
+    //     );
+    //     insert testPricebookEntry;
+    //     System.debug('PricebookEntry créé : ' + testPricebookEntry);
 
 
-        // Create 101 test orders with a total amount of 1010
-        List<Order> orders = new List<Order>();
-        for (Integer i = 0; i < 101; i++) {
-            Order order = new Order(
-                AccountId = testAccount.Id,
-                EffectiveDate = Date.today(),
-                Status = 'Draft',
-                Pricebook2Id = Test.getStandardPricebookId()
-            );
-            orders.add(order);
+    //     // Create 101 test orders with a total amount of 1010
+    //     List<Order> orders = new List<Order>();
+    //     for (Integer i = 0; i < 101; i++) {
+    //         Order order = new Order(
+    //             AccountId = testAccount.Id,
+    //             EffectiveDate = Date.today(),
+    //             Status = 'Draft',
+    //             Pricebook2Id = Test.getStandardPricebookId()
+    //         );
+    //         orders.add(order);
+    //     }
+    //     insert orders;
+
+    //     // add orderItems
+    //      List<OrderItem> testOrderItems = new List<OrderItem>();
+    //      for (Order order : orders) {
+    //          OrderItem testOrderItem = new OrderItem(
+    //              OrderId = Order.Id,
+    //              PricebookEntryId = testPricebookEntry.Id,
+    //              Quantity = 1,
+    //              UnitPrice = 100
+    //          );
+    //          testOrderItems.add(testOrderItem);
+    //      }
+    //      insert testOrderItems;
+
+    //     // Execute the batch
+    //     Test.startTest();
+    //     UpdateAccountRevenueBatch batch = new UpdateAccountRevenueBatch();
+    //     Database.executeBatch(batch);
+    //     Test.stopTest();
+
+    //     // Verify the Chiffre_d_affaire__c field is updated correctly
+    //     testAccount = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
+    //     System.debug('Chiffre_d_affaire__c: ' + testAccount.Chiffre_d_affaire__c);
+    //     Assert.areEqual(10100, testAccount.Chiffre_d_affaire__c, 'The Chiffre_d_affaire__c field should be updated to 1010');
+    // }
+
+        @isTest
+        static void test2BatchWith101Orders() {
+            // Create a test account using DataFactory
+            Account testAccount = DataFactory.createAccount('Test Account');
+
+            // Create a test product using DataFactory
+            Product2 testProduct = DataFactory.createProduct('Test Product');
+
+            // Create a test PricebookEntry using DataFactory
+            PricebookEntry testPricebookEntry = DataFactory.createPriceBookEntry(testProduct.Id, 100);
+
+            // Create 101 test orders using DataFactory
+            List<Order> orders = DataFactory.createOrders(testAccount.Id, 101, 'Ordered', Date.today(), 0);
+
+            // Create order items using DataFactory
+            Map<String, Id> orderData = new Map<String, Id>{
+                'Product2Id' => testProduct.Id,
+                'PricebookEntryId' => testPricebookEntry.Id
+            };
+            List<OrderItem> testOrderItems = DataFactory.createOrderItems(orders, orderData, 100.0);
+
+            // Execute the batch
+            Test.startTest();
+            UpdateAccountRevenueBatch batch = new UpdateAccountRevenueBatch();
+            Database.executeBatch(batch);
+            Test.stopTest();
+
+            // Verify the Chiffre_d_affaire__c field is updated correctly
+            testAccount = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
+            System.debug('Chiffre_d_affaire__c: ' + testAccount.Chiffre_d_affaire__c);
+            Assert.areEqual(10100, testAccount.Chiffre_d_affaire__c, 'The Chiffre_d_affaire__c field should be updated to 10100');
         }
-        insert orders;
-
-        // add orderItems
-         List<OrderItem> testOrderItems = new List<OrderItem>();
-         for (Order order : orders) {
-             OrderItem testOrderItem = new OrderItem(
-                 OrderId = Order.Id,
-                 PricebookEntryId = testPricebookEntry.Id,
-                 Quantity = 1,
-                 UnitPrice = 100
-             );
-             testOrderItems.add(testOrderItem);
-         }
-         insert testOrderItems;
-
-        // Execute the batch
-        Test.startTest();
-        UpdateAccountRevenueBatch batch = new UpdateAccountRevenueBatch();
-        Database.executeBatch(batch);
-        Test.stopTest();
-
-        // Verify the Chiffre_d_affaire__c field is updated correctly
-        testAccount = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
-        System.debug('Chiffre_d_affaire__c: ' + testAccount.Chiffre_d_affaire__c);
-        Assert.areEqual(10100, testAccount.Chiffre_d_affaire__c, 'The Chiffre_d_affaire__c field should be updated to 1010');
     }
-}
+

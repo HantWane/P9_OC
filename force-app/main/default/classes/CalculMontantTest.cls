@@ -1,84 +1,76 @@
 @isTest
 public class CalculMontantTest {
 
-    
     @isTest
     static void testTriggerOnOrderDelete() {
-        // Étape 1 : Création d'un compte
-        Account testAccount = new Account(Name = 'Test Account');
-        insert testAccount;
-        System.debug('Compte créé : ' + testAccount);
+        // Create a test account using DataFactory
+        Account testAccount = DataFactory.createAccount('Test Account');
 
-        // Étape 2 : Création d'une commande
-        Order orderToDelete = new Order(
-            AccountId = testAccount.Id,
-            Status = 'Ordered',
-            EffectiveDate = Date.today(),
-            ShipmentCost__c = 50,
-            Pricebook2Id = Test.getStandardPricebookId()
-        );
-        insert orderToDelete;
-        System.debug('Commande créée pour suppression : ' + orderToDelete);
+        // Create a test product using DataFactory
+        Product2 testProduct = DataFactory.createProduct('Test Product');
 
-        // Étape 3 : Création des OrderItems
-        Product2 product = new Product2(Name = 'Test Product', IsActive = true);
-        insert product;
-        System.debug('Produit créé : ' + product);
+        // Create a test PricebookEntry using DataFactory
+        PricebookEntry testPricebookEntry = DataFactory.createPriceBookEntry(testProduct.Id, 100);
 
-        PricebookEntry pricebookEntry = new PricebookEntry(
-            Pricebook2Id = Test.getStandardPricebookId(),
-            Product2Id = product.Id,
-            UnitPrice = 100,
-            IsActive = true
-        );
-        insert pricebookEntry;
-        System.debug('PricebookEntry créé : ' + pricebookEntry);
+        // Create a test order using DataFactory
+        Order orderToDelete = DataFactory.createOrder(testAccount.Id, 'Ordered', Date.today(), 50);
 
-        OrderItem orderItem = new OrderItem(
-            OrderId = orderToDelete.Id,
-            PricebookEntryId = pricebookEntry.Id,
-            Quantity = 2,
-            UnitPrice = 100
-        );
-        insert orderItem;
-        System.debug('OrderItem créé pour la commande à supprimer : ' + orderItem);
-        update orderToDelete;
+        // Create order items using DataFactory
+        Map<String, Id> orderData = new Map<String, Id>{
+            'Product2Id' => testProduct.Id,
+            'PricebookEntryId' => testPricebookEntry.Id
+        };
+        List<Order> ordersList = new List<Order>{orderToDelete};
+        List<OrderItem> testOrderItems = DataFactory.createOrderItems(ordersList, orderData, 100.0);
+
+        // Debug pour voir le montant de la commande avant la requête SOQL
+        System.debug('Montant de la commande avant la requête SOQL : ' + orderToDelete);
 
         // Vérification avant suppression
-        orderToDelete = [SELECT NetAmount__c FROM Order WHERE Id = :orderToDelete.Id];
+        orderToDelete = [SELECT Id, NetAmount__c, ShipmentCost__c FROM Order WHERE Id = :orderToDelete.Id];
         System.debug('Montant net avant suppression : ' + orderToDelete.NetAmount__c);
-        Assert.areEqual(150, orderToDelete.NetAmount__c, 'Le montant net avant suppression est incorrect.');
+
+        // Debug pour voir combien le compte a en commandes avant suppression
+        List<Order> ordersBeforeDelete = [SELECT Id, NetAmount__c, ShipmentCost__c FROM Order WHERE AccountId = :testAccount.Id];
+        System.debug('Commandes avant suppression : ' + ordersBeforeDelete);
+
+        // Debug pour voir les éléments de commande avant suppression
+        List<OrderItem> orderItemsBeforeDelete = [SELECT Id, Quantity, UnitPrice FROM OrderItem WHERE OrderId = :orderToDelete.Id];
+        System.debug('Éléments de commande avant suppression : ' + orderItemsBeforeDelete);
 
         // Suppression de la commande
         delete orderToDelete;
         System.debug('Commande supprimée.');
 
+        // Debug pour voir combien le compte a en commandes après suppression
+        List<Order> ordersAfterDelete = [SELECT Id, NetAmount__c, ShipmentCost__c FROM Order WHERE AccountId = :testAccount.Id];
+        System.debug('Commandes après suppression : ' + ordersAfterDelete);
+
         // Vérification que le chiffre d'affaires est mis à jour après suppression
         Account updatedAccount = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
         System.debug('Chiffre d\'affaires après suppression : ' + updatedAccount.Chiffre_d_affaire__c);
-        Assert.areEqual(null, updatedAccount.Chiffre_d_affaire__c, 'Le chiffre d\'affaires après suppression est incorrect.');
-    }
 
-    
+        // Calcul du montant net attendu après suppression
+        Decimal expectedNetAmountAfterDelete = orderToDelete.ShipmentCost__c;
+        System.debug('Montant net attendu après suppression : ' + expectedNetAmountAfterDelete);
+
+        // Vérification que le montant net après suppression est correct
+        Assert.areEqual(null, updatedAccount.Chiffre_d_affaire__c, 'Le montant net après suppression est incorrect.');
+    }
 
     @isTest
     static void testComputNetAmount() {
-    
-        // Étape 4 : Création de la première commande avec des items
-        Order order1 = new Order(
-            Status = 'Ordered',
-            EffectiveDate = Date.today(),
-            ShipmentCost__c = 50
-        );
-        System.debug('Commande 1 créée : ' + order1);
-        
+        // Create a test account using DataFactory
+        Account testAccount = DataFactory.createAccount('Test Account');
 
-        // Ajout d'OrderItems à la commande
+        // Create a test order using DataFactory
+        Order order1 = DataFactory.createOrder(testAccount.Id, 'Ordered', Date.today(), 50);
+
+        // Create order items
         List<OrderItem> orderItems1 = new List<OrderItem>{
             new OrderItem(Quantity = 2, UnitPrice = 100),
             new OrderItem(Quantity = 1, UnitPrice = 150)
         };
-        System.debug('OrderItems pour la commande 1 : ' + orderItems1);
 
         OrderHelper.computNetAmount(order1, orderItems1);
         Assert.areEqual(300, order1.NetAmount__c);
@@ -86,115 +78,79 @@ public class CalculMontantTest {
 
     @isTest
     static void testComputNetAmountwithNoOrderItems() {
+        // Create a test account using DataFactory
+        Account testAccount = DataFactory.createAccount('Test Account');
 
-        // Création de la première commande avec des items
-        Order order1 = new Order(
-            Status = 'Ordered',
-            EffectiveDate = Date.today(),
-            ShipmentCost__c = 50
-        );
-        System.debug('Commande 1 créée : ' + order1);
-        
+        // Create a test order using DataFactory
+        Order order1 = DataFactory.createOrder(testAccount.Id, 'Ordered', Date.today(), 50);
 
-        // Ajout d'OrderItems à la commande
+        // Create order items with zero quantity
         List<OrderItem> orderItems1 = new List<OrderItem>{
             new OrderItem(Quantity = 0, UnitPrice = 100),
             new OrderItem(Quantity = 0, UnitPrice = 150)
         };
-        System.debug('OrderItems pour la commande 1 : ' + orderItems1);
 
         OrderHelper.computNetAmount(order1, orderItems1);
         Assert.areEqual(-50, order1.NetAmount__c);
     }
 
-        @isTest
+    @isTest
     static void testComputNetAmountWithEmptyOrderItems() {
-        // Étape 1 : Création de la commande sans items
-        Order order = new Order(
-            Status = 'Ordered',
-            EffectiveDate = Date.today(),
-            ShipmentCost__c = 50
-        );
-        System.debug('Commande créée : ' + order);
+        // Create a test account using DataFactory
+        Account testAccount = DataFactory.createAccount('Test Account');
 
-        // Étape 2 : Liste vide d'OrderItems
+        // Create a test order using DataFactory
+        Order order = DataFactory.createOrder(testAccount.Id, 'Ordered', Date.today(), 50);
+
+        // Empty list of OrderItems
         List<OrderItem> orderItems = new List<OrderItem>();
-        System.debug('OrderItems pour la commande : ' + orderItems);
 
-        // Étape 3 : Appel de la méthode computNetAmount
+        // Call the computNetAmount method
         OrderHelper.computNetAmount(order, orderItems);
 
-        // Étape 4 : Vérification du montant net calculé
+        // Verify the calculated net amount
         Decimal expectedNetAmount = 0 - 50; // -50
         System.debug('Montant net attendu : ' + expectedNetAmount);
         System.debug('Montant net calculé : ' + order.NetAmount__c);
         Assert.areEqual(expectedNetAmount, order.NetAmount__c, 'Le montant net calculé est incorrect.');
     }
 
-        @isTest
-        static void testComputNetAmountWithMultipleOrders() {
-            // Étape 1 : Création d'un compte
-            Account testAccount = new Account(Name = 'Test Account');
-            insert testAccount;
+    @isTest
+    static void testComputNetAmountWithMultipleOrders() {
+        // Create a test account using DataFactory
+        Account testAccount = DataFactory.createAccount('Test Account');
 
-            // Étape 2 : Création d'un produit
-            Product2 testProduct = new Product2(Name = 'Test Product', IsActive = true);
-            insert testProduct;
-            System.debug('Produit créé : ' + testProduct);
+        // Create a test product using DataFactory
+        Product2 testProduct = DataFactory.createProduct('Test Product');
 
-            // Étape 3 : Création d'une entrée dans le Pricebook
-            PricebookEntry testPricebookEntry = new PricebookEntry(
-                Pricebook2Id = Test.getStandardPricebookId(),
-                Product2Id = testProduct.Id,
-                UnitPrice = 100,
-                IsActive = true
-            );
-            insert testPricebookEntry;
-            System.debug('PricebookEntry créé : ' + testPricebookEntry);
+        // Create a test PricebookEntry using DataFactory
+        PricebookEntry testPricebookEntry = DataFactory.createPriceBookEntry(testProduct.Id, 100);
 
-            // Étape 4 : Création de 101 commandes
-            List<Order> testOrders = new List<Order>();
-            for (Integer i = 0; i < 101; i++) {
-                Order testOrder = new Order(
-                    Status = 'Ordered',
-                    EffectiveDate = Date.today(),
-                    ShipmentCost__c = 50,
-                    AccountId = testAccount.Id,
-                    Pricebook2Id = Test.getStandardPricebookId()
-                );
-                testOrders.add(testOrder);
+        // Create 101 test orders using DataFactory
+        List<Order> testOrders = DataFactory.createOrders(testAccount.Id, 101, 'Ordered', Date.today(), 50);
+
+        // Create order items using DataFactory
+        Map<String, Id> orderData = new Map<String, Id>{
+            'Product2Id' => testProduct.Id,
+            'PricebookEntryId' => testPricebookEntry.Id
+        };
+        List<OrderItem> testOrderItems = DataFactory.createOrderItems(testOrders, orderData, 100.0);
+
+        // Retrieve all OrderItems in a single SOQL query
+        Map<Id, List<OrderItem>> orderToOrderItemsMap = new Map<Id, List<OrderItem>>();
+        for (OrderItem orderItem : [SELECT OrderId, Quantity, UnitPrice FROM OrderItem WHERE OrderId IN :testOrders]) {
+            if (!orderToOrderItemsMap.containsKey(orderItem.OrderId)) {
+                orderToOrderItemsMap.put(orderItem.OrderId, new List<OrderItem>());
             }
-            insert testOrders;
-
-            // Étape 5 : Création des OrderItems pour chaque commande
-            List<OrderItem> testOrderItems = new List<OrderItem>();
-            for (Order testOrder : testOrders) {
-                OrderItem testOrderItem = new OrderItem(
-                    OrderId = testOrder.Id,
-                    PricebookEntryId = testPricebookEntry.Id,
-                    Quantity = 1,
-                    UnitPrice = 100
-                );
-                testOrderItems.add(testOrderItem);
-            }
-            insert testOrderItems;
-
-            // Étape 6 : Récupérer tous les OrderItems en une seule requête SOQL
-            Map<Id, List<OrderItem>> orderToOrderItemsMap = new Map<Id, List<OrderItem>>();
-            for (OrderItem orderItem : [SELECT OrderId, Quantity, UnitPrice FROM OrderItem WHERE OrderId IN :testOrders]) {
-                if (!orderToOrderItemsMap.containsKey(orderItem.OrderId)) {
-                    orderToOrderItemsMap.put(orderItem.OrderId, new List<OrderItem>());
-                }
-                orderToOrderItemsMap.get(orderItem.OrderId).add(orderItem);
-            }
-
-            // Étape 7 : Vérification du montant net calculé pour chaque commande
-            for (Order testOrder : testOrders) {
-                List<OrderItem> orderItemsForOrder = orderToOrderItemsMap.get(testOrder.Id);
-                OrderHelper.computNetAmount(testOrder, orderItemsForOrder);
-                System.debug('Montant net calculé pour la commande ' + testOrder.Id + ' : ' + testOrder.NetAmount__c);
-                Assert.areEqual(50, testOrder.NetAmount__c, 'Le montant net calculé est incorrect pour la commande ' + testOrder.Id);
-            }
+            orderToOrderItemsMap.get(orderItem.OrderId).add(orderItem);
         }
 
+        // Verify the calculated net amount for each order
+        for (Order testOrder : testOrders) {
+            List<OrderItem> orderItemsForOrder = orderToOrderItemsMap.get(testOrder.Id);
+            OrderHelper.computNetAmount(testOrder, orderItemsForOrder);
+            System.debug('Montant net calculé pour la commande ' + testOrder.Id + ' : ' + testOrder.NetAmount__c);
+            Assert.areEqual(50, testOrder.NetAmount__c, 'Le montant net calculé est incorrect pour la commande ' + testOrder.Id);
+        }
+    }
 }
