@@ -1,156 +1,128 @@
+/**
+ * Author: Antoine
+ * Date: 03/01/2025
+ * Description:
+ * Test class for OrderTrigger and OrderService functionality.
+ * This test class covers the functionality of handling order deletions,
+ * net amount computation, and order-related updates on Account.
+ */
+
 @isTest
 public class OrderTriggerTest {
 
+    // Test case for the deletion of an order and its impact on the account's revenue.
     @isTest
     static void testTriggerOnOrderDelete() {
-        // Create a test account using DataFactory
+        // Create necessary test data (Account, Product, PricebookEntry, and Order)
         Account testAccount = DataFactory.createAccount('Test Account');
-
-        // Create a test product using DataFactory
         Product2 testProduct = DataFactory.createProduct('Test Product');
-
-        // Create a test PricebookEntry using DataFactory
         PricebookEntry testPricebookEntry = DataFactory.createPriceBookEntry(testProduct.Id, 100);
-
-        // Create a test order using DataFactory
         Order orderToDelete = DataFactory.createOrder(testAccount.Id, 'Ordered', Date.today(), 50);
 
-        // Create order items using DataFactory
+        // Creating a map for the order items associated with the order
         Map<String, Id> orderData = new Map<String, Id>{
             'Product2Id' => testProduct.Id,
             'PricebookEntryId' => testPricebookEntry.Id
         };
-        List<Order> ordersList = new List<Order>{orderToDelete};
-        List<OrderItem> testOrderItems = DataFactory.createOrderItems(ordersList, orderData, 100.0);
+        List<OrderItem> testOrderItems = DataFactory.createOrderItems(
+            new List<Order>{orderToDelete}, 
+            orderData, 
+            100.0
+        );
 
-        // Debug pour voir le montant de la commande avant la requête SOQL
-        System.debug('Montant de la commande avant la requête SOQL : ' + orderToDelete);
+        // Before deleting, verify the current values of order and account
+        orderToDelete = [SELECT Id, NetAmount__c FROM Order WHERE Id = :orderToDelete.Id];
+        System.debug('NetAmount before delete: ' + orderToDelete.NetAmount__c);
+        Account accountBeforeDelete = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
 
-        // Vérification avant suppression
-        orderToDelete = [SELECT Id, NetAmount__c, ShipmentCost__c FROM Order WHERE Id = :orderToDelete.Id];
-        System.debug('Montant net avant suppression : ' + orderToDelete.NetAmount__c);
-
-        // Debug pour voir combien le compte a en commandes avant suppression
-        List<Order> ordersBeforeDelete = [SELECT Id, NetAmount__c, ShipmentCost__c FROM Order WHERE AccountId = :testAccount.Id];
-        System.debug('Commandes avant suppression : ' + ordersBeforeDelete);
-
-        // Debug pour voir les éléments de commande avant suppression
-        List<OrderItem> orderItemsBeforeDelete = [SELECT Id, Quantity, UnitPrice FROM OrderItem WHERE OrderId = :orderToDelete.Id];
-        System.debug('Éléments de commande avant suppression : ' + orderItemsBeforeDelete);
-
-        // Suppression de la commande
+        // Perform the order deletion and check its impact
+        Test.startTest();
         delete orderToDelete;
-        System.debug('Commande supprimée.');
+        Test.stopTest();
 
-        // Debug pour voir combien le compte a en commandes après suppression
-        List<Order> ordersAfterDelete = [SELECT Id, NetAmount__c, ShipmentCost__c FROM Order WHERE AccountId = :testAccount.Id];
-        System.debug('Commandes après suppression : ' + ordersAfterDelete);
-
-        // Vérification que le chiffre d'affaires est mis à jour après suppression
+        // After deletion, check if the account's revenue (Chiffre_d_affaire__c) was updated as expected
         Account updatedAccount = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
-        System.debug('Chiffre d\'affaires après suppression : ' + updatedAccount.Chiffre_d_affaire__c);
-
-        // Calcul du montant net attendu après suppression
-        Decimal expectedNetAmountAfterDelete = orderToDelete.ShipmentCost__c;
-        System.debug('Montant net attendu après suppression : ' + expectedNetAmountAfterDelete);
-
-        // Vérification que le montant net après suppression est correct
-        Assert.areEqual(null, updatedAccount.Chiffre_d_affaire__c, 'Le montant net après suppression est incorrect.');
+        Assert.areEqual(0, updatedAccount.Chiffre_d_affaire__c, 'Account revenue should be updated after order deletion.');
     }
 
+    // Test case for calculating the net amount when order items exist
     @isTest
     static void testComputNetAmount() {
-        // Create a test account using DataFactory
+        // Create test data for the order and associated order items
         Account testAccount = DataFactory.createAccount('Test Account');
-
-        // Create a test order using DataFactory
         Order order1 = DataFactory.createOrder(testAccount.Id, 'Ordered', Date.today(), 50);
-
-        // Create order items
         List<OrderItem> orderItems1 = new List<OrderItem>{
             new OrderItem(Quantity = 2, UnitPrice = 100),
             new OrderItem(Quantity = 1, UnitPrice = 150)
         };
 
-        OrderHelper.computNetAmount(order1, orderItems1);
-        Assert.areEqual(300, order1.NetAmount__c);
+        // Perform net amount calculation and validate
+        OrderService.computeNetAmount(order1, orderItems1);
+        Assert.areEqual(300, order1.NetAmount__c, 'Net amount calculation is incorrect.');
     }
 
+    // Test case for calculating net amount when order items have zero quantities
     @isTest
-    static void testComputNetAmountwithNoOrderItems() {
-        // Create a test account using DataFactory
+    static void testComputNetAmountWithNoOrderItems() {
+        // Create test data with no valid order items (zero quantities)
         Account testAccount = DataFactory.createAccount('Test Account');
-
-        // Create a test order using DataFactory
         Order order1 = DataFactory.createOrder(testAccount.Id, 'Ordered', Date.today(), 50);
 
-        // Create order items with zero quantity
+        // Order items with zero quantities
         List<OrderItem> orderItems1 = new List<OrderItem>{
             new OrderItem(Quantity = 0, UnitPrice = 100),
             new OrderItem(Quantity = 0, UnitPrice = 150)
         };
 
-        OrderHelper.computNetAmount(order1, orderItems1);
-        Assert.areEqual(-50, order1.NetAmount__c);
+        // Calculate net amount and verify that it reflects only the shipment cost
+        OrderService.computeNetAmount(order1, orderItems1);
+        Assert.areEqual(-50, order1.NetAmount__c, 'Net amount should consider only shipment cost.');
     }
 
+    // Test case for calculating the net amount when no order items are provided
     @isTest
     static void testComputNetAmountWithEmptyOrderItems() {
-        // Create a test account using DataFactory
+        // Create order with no items (empty list)
         Account testAccount = DataFactory.createAccount('Test Account');
-
-        // Create a test order using DataFactory
         Order order = DataFactory.createOrder(testAccount.Id, 'Ordered', Date.today(), 50);
-
-        // Empty list of OrderItems
         List<OrderItem> orderItems = new List<OrderItem>();
 
-        // Call the computNetAmount method
-        OrderHelper.computNetAmount(order, orderItems);
-
-        // Verify the calculated net amount
-        Decimal expectedNetAmount = 0 - 50; // -50
-        System.debug('Montant net attendu : ' + expectedNetAmount);
-        System.debug('Montant net calculé : ' + order.NetAmount__c);
-        Assert.areEqual(expectedNetAmount, order.NetAmount__c, 'Le montant net calculé est incorrect.');
+        // Calculate net amount with no order items and verify the result
+        OrderService.computeNetAmount(order, orderItems);
+        Assert.areEqual(-50, order.NetAmount__c, 'Net amount with no items should equal negative shipment cost.');
     }
 
+    // Test case for calculating the net amount with multiple orders
     @isTest
     static void testComputNetAmountWithMultipleOrders() {
-        // Create a test account using DataFactory
+        // Set up account, product, and pricebook entry for multiple orders
         Account testAccount = DataFactory.createAccount('Test Account');
-
-        // Create a test product using DataFactory
         Product2 testProduct = DataFactory.createProduct('Test Product');
-
-        // Create a test PricebookEntry using DataFactory
         PricebookEntry testPricebookEntry = DataFactory.createPriceBookEntry(testProduct.Id, 100);
 
-        // Create 101 test orders using DataFactory
+        // Create multiple orders for the test
         List<Order> testOrders = DataFactory.createOrders(testAccount.Id, 101, 'Ordered', Date.today(), 50);
-
-        // Create order items using DataFactory
         Map<String, Id> orderData = new Map<String, Id>{
             'Product2Id' => testProduct.Id,
             'PricebookEntryId' => testPricebookEntry.Id
         };
         List<OrderItem> testOrderItems = DataFactory.createOrderItems(testOrders, orderData, 100.0);
 
-        // Retrieve all OrderItems in a single SOQL query
+        // Map the order items to their respective orders
         Map<Id, List<OrderItem>> orderToOrderItemsMap = new Map<Id, List<OrderItem>>();
         for (OrderItem orderItem : [SELECT OrderId, Quantity, UnitPrice FROM OrderItem WHERE OrderId IN :testOrders]) {
+            // Ensure that order items are grouped by their order ID
             if (!orderToOrderItemsMap.containsKey(orderItem.OrderId)) {
                 orderToOrderItemsMap.put(orderItem.OrderId, new List<OrderItem>());
             }
             orderToOrderItemsMap.get(orderItem.OrderId).add(orderItem);
         }
 
-        // Verify the calculated net amount for each order
+        // Verify the net amount calculation for each order
         for (Order testOrder : testOrders) {
             List<OrderItem> orderItemsForOrder = orderToOrderItemsMap.get(testOrder.Id);
-            OrderHelper.computNetAmount(testOrder, orderItemsForOrder);
-            System.debug('Montant net calculé pour la commande ' + testOrder.Id + ' : ' + testOrder.NetAmount__c);
-            Assert.areEqual(50, testOrder.NetAmount__c, 'Le montant net calculé est incorrect pour la commande ' + testOrder.Id);
+            OrderService.computeNetAmount(testOrder, orderItemsForOrder);
+            Assert.areEqual(50, testOrder.NetAmount__c, 'Net amount calculation failed for Order ID: ' + testOrder.Id);
         }
     }
 }
