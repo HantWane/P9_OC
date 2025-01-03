@@ -1,5 +1,5 @@
 @isTest
-public class CalculMontantTest {
+public class OrderTriggerTest {
 
     @isTest
     static void testTriggerOnOrderDelete() {

@@ -1,4 +1,4 @@
-trigger CalculMontant on Order (before insert, before update, after insert, after update, after delete) {
+trigger OrderTrigger on Order (before insert, before update, after insert, after update, after delete) {
 
     if (Trigger.isBefore) {
         if (Trigger.isInsert || Trigger.isUpdate) {
@@ -9,11 +9,12 @@ trigger CalculMontant on Order (before insert, before update, after insert, afte
         }
     }
 
+
+    // sortir la boucle et la mettre dans la méthode 
     if (Trigger.isAfter) {
         Set<Id> accountIds = new Set<Id>();
 
         if (Trigger.isInsert || Trigger.isUpdate) {
-           //  OrderHelper.calculateNetAmount(Trigger.new);
             for (Order o : Trigger.new) {
                 accountIds.add(o.AccountId);
             }
