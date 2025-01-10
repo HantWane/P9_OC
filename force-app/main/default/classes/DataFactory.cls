@@ -1,11 +1,42 @@
 /**
  * Author: Antoine
  * Date: 03/01/2025
- * Description: Utility class for creating Salesforce records such as Accounts, Products, Orders, and Order Items.
- *              Designed for use in test contexts or as a data factory for bulk operations.
- *
- * Note: This class is implemented with sharing to respect the current user's sharing rules.
+ * 
+ * Description:
+ * Utility class for creating Salesforce records such as Accounts, Products, 
+ * Orders, and Order Items. This class is designed for use in test contexts 
+ * or as a data factory for bulk operations, facilitating the creation and 
+ * insertion of records for testing purposes.
+ * 
+ * Features:
+ * - Provides methods for creating and inserting standard Salesforce records 
+ *   including Account, Product2, PricebookEntry, Order, and OrderItem.
+ * - Each method automatically inserts the created record(s) into the Salesforce 
+ *   database.
+ * - Designed to be used within test classes for creating mock data or for bulk 
+ *   operations in a controlled environment.
+ * 
+ * Notes:
+ * - This class is implemented with sharing to respect the current user's 
+ *   sharing rules.
+ * 
+ * Public Methods:
+ * - createAccount: Creates and inserts an Account record with the given 
+ *   account name.
+ * - createProduct: Creates and inserts a Product2 record with the given 
+ *   product name, and marks it as active.
+ * - createPriceBookEntry: Creates and inserts a PricebookEntry record for 
+ *   the given Product2 ID and unit price.
+ * - createOrder: Creates and inserts a single Order record with the specified 
+ *   account, status, effective date, and shipment cost.
+ * - createOrders: Creates and inserts multiple Order records based on the 
+ *   specified account, number of orders, status, effective date, and shipment 
+ *   cost.
+ * - createOrderItems: Creates and inserts multiple OrderItem records for the 
+ *   given orders and associated product/pricebook data.
+ * 
  */
+
 
 public with sharing class DataFactory {
 

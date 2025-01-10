@@ -1,45 +1,52 @@
 @IsTest
-private class testMyTeamOrdersController {
+private class MyTeamOrdersControllerTest {
 
     // Méthode de configuration des données communes à tous les tests
     @TestSetup
     static void makeData(){
         // Créer un compte de test pour l'équipe Eastern Sales Team
-        Account acc1 = new Account(Name = 'Test Account 1');
-        insert acc1;
+        Account acc1 = DataFactory.createAccount('Test Account 1');
 
         // Créer un produit
-        Product2 product = new Product2(Name = 'Test Product', IsActive = true);
-        insert product;
+        Product2 product = DataFactory.createProduct('Test Product');
 
         // Créer un PricebookEntry pour le produit dans le Pricebook standard
-        PricebookEntry pricebookEntry = new PricebookEntry(
-            Pricebook2Id = Test.getStandardPricebookId(),
-            Product2Id = product.Id,
-            UnitPrice = 100,
-            IsActive = true
-        );
-        insert pricebookEntry;
+        PricebookEntry pricebookEntry = DataFactory.createPriceBookEntry(product.Id, 100);
 
         // Créer une commande de test avec des lignes de commande pour l'équipe Eastern Sales Team
-        Order testOrder = new Order(
-            AccountId = acc1.Id,
-            EffectiveDate = Date.newInstance(2024, 10, 10),
-            Status = 'Draft',
-            Pricebook2Id = Test.getStandardPricebookId()
-        );
-        insert testOrder;
+        Order testOrder = DataFactory.createOrder(acc1.Id, 'Ordered', Date.newInstance(2024, 10, 10), 0);
 
         // Créer des OrderItems associés à la commande
-        List<OrderItem> orderItems = new List<OrderItem>();
-        orderItems.add(new OrderItem(OrderId = testOrder.Id, PricebookEntryId = pricebookEntry.Id, Quantity = 2, UnitPrice = 100));
-        orderItems.add(new OrderItem(OrderId = testOrder.Id, PricebookEntryId = pricebookEntry.Id, Quantity = 1, UnitPrice = 150));
-        insert orderItems;
+        Map<String, Id> orderData = new Map<String, Id>{
+            'Product2Id' => product.Id,
+            'PricebookEntryId' => pricebookEntry.Id
+        };
+        List<Order> ordersList = new List<Order>{testOrder};
+        List<OrderItem> orderItems = DataFactory.createOrderItems(ordersList, orderData, 100);
+
+        // Ajouter un deuxième OrderItem manuellement
+        OrderItem additionalOrderItem = new OrderItem(
+            OrderId = testOrder.Id,
+            PricebookEntryId = pricebookEntry.Id,
+            Quantity = 1,
+            UnitPrice = 150
+        );
+        insert additionalOrderItem;
+
+        // Mettre à jour la commande pour s'assurer que les totaux sont correctement calculés
         update testOrder;
 
         // Créer un deuxième compte sans commande pour l'équipe Western Sales Team
-        Account acc3 = new Account(Name = 'Test Account 3');
-        insert acc3;
+        Account acc3 = DataFactory.createAccount('Test Account 3');
+
+        // Associer les comptes aux utilisateurs des équipes respectives
+        User easternUser = [SELECT Id FROM User WHERE UserRole.Name = 'Eastern Sales Team' LIMIT 1];
+        User westernUser = [SELECT Id FROM User WHERE UserRole.Name = 'Western Sales Team' LIMIT 1];
+
+        acc1.OwnerId = easternUser.Id;
+        acc3.OwnerId = westernUser.Id;
+        update acc1;
+        update acc3;
     }
 
     // Test pour vérifier le calcul de SumOrders pour l'équipe Eastern Sales Team
@@ -56,11 +63,11 @@ private class testMyTeamOrdersController {
             // Appeler la méthode SumOrders pour obtenir le total des commandes
             Decimal sumOrders = controller.SumOrders;
 
-            // Calcul attendu : (2 * 100) + (1 * 150) = 350
-            Decimal expectedSum = 350;
+            // Calcul attendu : 100 + (1 * 150) = 350
+            Decimal expectedSum = 250;
 
             // Assertion pour vérifier que le total calculé est correct
-            System.assertEquals(expectedSum, sumOrders, 'La somme des commandes devrait être égale à 350');
+            Assert.areEqual(expectedSum, sumOrders, 'La somme des commandes devrait être égale à 250');
         }
     }
 
@@ -82,7 +89,7 @@ private class testMyTeamOrdersController {
             Decimal expectedSum = 0;
 
             // Assertion pour vérifier que le total calculé est correct
-            System.assertEquals(expectedSum, sumOrders, 'La somme des commandes devrait être égale à 0');
+            Assert.areEqual(expectedSum, sumOrders, 'La somme des commandes devrait être égale à 0');
         }
     }
 }

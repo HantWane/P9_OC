@@ -15,7 +15,7 @@
  *       and integrates with the UpdateAccountRevenueBatch class for batch processing.
  */
 
-public class OrderService {
+ public class OrderService {
 
     // Method to calculate the net amount for a list of orders
     public static void calculateNetAmount(List<Order> newOrders) {
