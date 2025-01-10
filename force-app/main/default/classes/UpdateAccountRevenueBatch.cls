@@ -42,7 +42,7 @@ global class UpdateAccountRevenueBatch implements Database.Batchable<sObject> {
      */
     global Database.QueryLocator start(Database.BatchableContext BC) {
         return Database.getQueryLocator([
-            SELECT Id, (SELECT TotalAmount FROM Orders) 
+            SELECT Id, (SELECT TotalAmount FROM Orders WHERE Status = 'Ordered') 
             FROM Account 
             WHERE Id IN :accountIds
         ]);
