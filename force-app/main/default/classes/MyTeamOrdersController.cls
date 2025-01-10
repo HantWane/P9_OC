@@ -29,13 +29,13 @@
  public with sharing class MyTeamOrdersController {
     public decimal SumOrders {
         get {
-            // Récupérer l'ID de l'utilisateur connecté
+            // Get userID 
             Id userId = UserInfo.getUserId();
 
-            // Récupérer le rôle de l'utilisateur connecté
+            // Get userRole
             UserRole userRole = [SELECT Id, Name FROM UserRole WHERE Id = :UserInfo.getUserRoleId()];
 
-            // Filtrer les commandes par rôle de l'utilisateur connecté
+            // Sort Orders by userRole by userId
             AggregateResult groupedResults = [SELECT SUM(TotalAmount) total
                                               FROM Order
                                               WHERE Status = 'Ordered'

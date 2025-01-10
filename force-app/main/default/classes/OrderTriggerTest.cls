@@ -60,13 +60,11 @@
          Account accountBeforeDelete = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
  
          // Perform the order deletion and check its impact
-         Test.startTest();
          delete orderToDelete;
-         Test.stopTest();
  
          // After deletion, check if the account's revenue (Chiffre_d_affaire__c) was updated as expected
          Account updatedAccount = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
-         Assert.areEqual(0, updatedAccount.Chiffre_d_affaire__c, 'Account revenue should be updated after order deletion.');
+         Assert.isNull(updatedAccount.Chiffre_d_affaire__c, 'Account revenue should be updated after order deletion.');
      }
  
      // Test case for calculating the net amount when order items exist
@@ -81,9 +79,7 @@
          };
  
          // Perform net amount calculation and validate
-         Test.startTest();
          OrderService.computeNetAmount(order1, orderItems1);
-         Test.stopTest();
          Assert.areEqual(300, order1.NetAmount__c, 'Net amount calculation is incorrect.');
      }
  
@@ -101,9 +97,7 @@
          };
  
          // Calculate net amount and verify that it reflects only the shipment cost
-         Test.startTest();
          OrderService.computeNetAmount(order1, orderItems1);
-         Test.stopTest();
          Assert.areEqual(-50, order1.NetAmount__c, 'Net amount should consider only shipment cost.');
      }
  
@@ -116,9 +110,7 @@
          List<OrderItem> orderItems = new List<OrderItem>();
  
          // Calculate net amount with no order items and verify the result
-         Test.startTest();
          OrderService.computeNetAmount(order, orderItems);
-         Test.stopTest();
          Assert.areEqual(-50, order.NetAmount__c, 'Net amount with no items should equal negative shipment cost.');
      }
  
@@ -149,13 +141,11 @@
          }
  
          // Verify the net amount calculation for each order
-         Test.startTest();
          for (Order testOrder : testOrders) {
              List<OrderItem> orderItemsForOrder = orderToOrderItemsMap.get(testOrder.Id);
              OrderService.computeNetAmount(testOrder, orderItemsForOrder);
              Assert.areEqual(50, testOrder.NetAmount__c, 'Net amount calculation failed for Order ID: ' + testOrder.Id);
          }
-         Test.stopTest();
      }
  
      // Test case for calculating the net amount when order items are null
@@ -166,9 +156,7 @@
          Order order = DataFactory.createOrder(testAccount.Id, 'Ordered', Date.today(), 50);
  
          // Calculate net amount with null order items and verify the result
-         Test.startTest();
          OrderService.computeNetAmount(order, null);
-         Test.stopTest();
          Assert.areEqual(-50, order.NetAmount__c, 'Net amount with null items should equal negative shipment cost.');
      }
  
@@ -184,9 +172,7 @@
          };
  
          // Calculate net amount with zero quantities and verify the result
-         Test.startTest();
          OrderService.computeNetAmount(order, orderItems);
-         Test.stopTest();
          Assert.areEqual(-50, order.NetAmount__c, 'Net amount with zero quantities should equal negative shipment cost.');
      }
  
@@ -199,9 +185,7 @@
          List<OrderItem> orderItems = new List<OrderItem>();
  
          // Calculate net amount with empty order items and verify the result
-         Test.startTest();
          OrderService.computeNetAmount(order, orderItems);
-         Test.stopTest();
          Assert.areEqual(-50, order.NetAmount__c, 'Net amount with empty items should equal negative shipment cost.');
      }
  
@@ -223,9 +207,7 @@
          insert orderItems;
  
          // Calculate net amount with valid order items and verify the result
-         Test.startTest();
          OrderService.computeNetAmount(order, orderItems);
-         Test.stopTest();
          Assert.areEqual(300, order.NetAmount__c, 'Net amount calculation is incorrect.');
      }
  

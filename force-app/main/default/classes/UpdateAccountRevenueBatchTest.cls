@@ -71,7 +71,6 @@ private class UpdateAccountRevenueBatchTest {
 
         // Step 7: Verify the Chiffre_d_affaire__c field is updated correctly
         testAccount = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
-        System.debug('Chiffre_d_affaire__c: ' + testAccount.Chiffre_d_affaire__c);
 
         // Expected revenue: 101 orders × 100 per order item = 10100
         Assert.areEqual(10100, testAccount.Chiffre_d_affaire__c,

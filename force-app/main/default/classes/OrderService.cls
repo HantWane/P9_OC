@@ -71,6 +71,7 @@
             Database.executeBatch(new UpdateAccountRevenueBatch(accountIds));
         }
     }
+    
     // Helper method to compute the net amount for a single order
     @testVisible
     public static void computeNetAmount(Order myOrder, List<OrderItem> items) {
