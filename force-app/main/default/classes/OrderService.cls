@@ -58,16 +58,28 @@
     }
 
     // Method to update account revenue by triggering a batch process
-    public static void updateAccountRevenue(Set<Id> accountIds) {
+    public static void updateAccountRevenue(List<Order> orders) {
+        Set<Id> accountIds = new Set<Id>();
+
+        // Collect Account IDs from the list of orders
+        for (Order o : orders) {
+            accountIds.add(o.AccountId);
+        }
 
         // Execute the UpdateAccountRevenueBatch for the specified account IDs
-        Database.executeBatch(new UpdateAccountRevenueBatch(accountIds));
-
+        if (!accountIds.isEmpty()) {
+            Database.executeBatch(new UpdateAccountRevenueBatch(accountIds));
+        }
     }
-
     // Helper method to compute the net amount for a single order
     @testVisible
     public static void computeNetAmount(Order myOrder, List<OrderItem> items) {
+        // If the order status is not 'Ordered', reset the net amount to null
+        if (myOrder.Status != 'Ordered') {
+            myOrder.NetAmount__c = null;
+            return;
+        }
+
         // Get the shipment cost for the order, defaulting to 0 if null
         Decimal shipmentCost = myOrder.ShipmentCost__c != null ? myOrder.ShipmentCost__c : 0;
 

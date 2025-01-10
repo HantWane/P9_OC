@@ -37,7 +37,7 @@
  * 
  */
 
-
+@isTest
 public with sharing class DataFactory {
 
     // Creates and inserts an Account record with the given name
@@ -80,7 +80,7 @@ public with sharing class DataFactory {
     }
 
     // Creates and inserts multiple Order records based on the specified details
-    public static List<Order> createOrders(Id accountId, Integer numberOfOrders, String status, Date effectiveDate, Decimal shipmentCost) {
+    public static List<Order> createOrders(Id accountId, String status, Date effectiveDate, Decimal shipmentCost, Integer numberOfOrders) {
         List<Order> ordersList = new List<Order>();
         for (Integer i = 0; i < numberOfOrders; i++) {
             Order order = new Order(

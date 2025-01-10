@@ -50,46 +50,35 @@ private class MyTeamOrdersControllerTest {
     }
 
     // Test pour vérifier le calcul de SumOrders pour l'équipe Eastern Sales Team
-    @IsTest
-    static void testSumOrdersEasternTeam() {
-        // Récupérer l'utilisateur existant avec le rôle "Eastern Sales Team"
+    @isTest
+    static void testSumOrdersForEasternSalesTeam() {
+        // Récupérer l'utilisateur de l'équipe Eastern Sales Team
         User easternUser = [SELECT Id FROM User WHERE UserRole.Name = 'Eastern Sales Team' LIMIT 1];
 
-        // Instancier la classe du contrôleur à tester
-        MyTeamOrdersController controller = new MyTeamOrdersController();
-
-        // Simuler l'utilisateur connecté comme étant de l'équipe Eastern Sales Team
+        // Simuler l'utilisateur connecté
         System.runAs(easternUser) {
-            // Appeler la méthode SumOrders pour obtenir le total des commandes
-            Decimal sumOrders = controller.SumOrders;
+            // Créer une instance du contrôleur
+            MyTeamOrdersController controller = new MyTeamOrdersController();
 
-            // Calcul attendu : 100 + (1 * 150) = 350
-            Decimal expectedSum = 250;
-
-            // Assertion pour vérifier que le total calculé est correct
-            Assert.areEqual(expectedSum, sumOrders, 'La somme des commandes devrait être égale à 250');
+            // Vérifier que la somme des commandes est correcte
+            decimal expectedSum = 250.0; // 100 + 150
+            Assert.areEqual(expectedSum, controller.SumOrders, 'La somme des commandes est incorrecte pour l\'équipe Eastern Sales Team');
         }
     }
 
-    // Test pour vérifier le calcul de SumOrders pour l'équipe Western Sales Team
-    @IsTest
-    static void testSumOrdersWesternTeam() {
-        // Récupérer l'utilisateur existant avec le rôle "Western Sales Team"
+    @isTest
+    static void testSumOrdersForWesternSalesTeam() {
+        // Récupérer l'utilisateur de l'équipe Western Sales Team
         User westernUser = [SELECT Id FROM User WHERE UserRole.Name = 'Western Sales Team' LIMIT 1];
 
-        // Instancier la classe du contrôleur à tester
-        MyTeamOrdersController controller = new MyTeamOrdersController();
-
-        // Simuler l'utilisateur connecté comme étant de l'équipe Western Sales Team
+        // Simuler l'utilisateur connecté
         System.runAs(westernUser) {
-            // Appeler la méthode SumOrders pour obtenir le total des commandes
-            Decimal sumOrders = controller.SumOrders;
+            // Créer une instance du contrôleur
+            MyTeamOrdersController controller = new MyTeamOrdersController();
 
-            // Calcul attendu : 0 (puisqu'il n'y a pas de commandes pour cette équipe)
-            Decimal expectedSum = 0;
-
-            // Assertion pour vérifier que le total calculé est correct
-            Assert.areEqual(expectedSum, sumOrders, 'La somme des commandes devrait être égale à 0');
+            // Vérifier que la somme des commandes est 0 lorsqu'il n'y a pas de commandes
+            decimal expectedSum = 0.0;
+            Assert.areEqual(expectedSum, controller.SumOrders, 'La somme des commandes est incorrecte pour l\'équipe Western Sales Team');
         }
     }
 }

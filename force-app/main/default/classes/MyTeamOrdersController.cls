@@ -22,12 +22,11 @@
  * 
  * Notes:
  * - Assumes the user has an associated role and owns at least one account.
- * - The class is defined with `without sharing` to bypass sharing rules for 
- *   this controller.
+ * - The class is defined with `with sharing`
  */
 
 
-public without sharing class MyTeamOrdersController {
+ public with sharing class MyTeamOrdersController {
     public decimal SumOrders {
         get {
             // Récupérer l'ID de l'utilisateur connecté
@@ -40,7 +39,7 @@ public without sharing class MyTeamOrdersController {
             AggregateResult groupedResults = [SELECT SUM(TotalAmount) total
                                               FROM Order
                                               WHERE Status = 'Ordered'
-                                              AND Account.OwnerId = :userId];
+                                              AND Account.Owner.UserRoleId = :userRole.Id];
 
             return groupedResults.get('total') != null ? (decimal)groupedResults.get('total') : 0;
         }
