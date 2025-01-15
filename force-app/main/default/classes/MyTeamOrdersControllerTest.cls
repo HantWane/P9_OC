@@ -70,8 +70,10 @@ private class MyTeamOrdersControllerTest {
             MyTeamOrdersController controller = new MyTeamOrdersController();
 
             // Verify that the sum of orders is correct
+            Test.startTest();
             decimal expectedSum = 250.0; // 100 + 150
             Assert.areEqual(expectedSum, controller.SumOrders, 'The sum of orders is incorrect for the Eastern Sales Team');
+            Test.stopTest();
         }
     }
 
@@ -86,8 +88,10 @@ private class MyTeamOrdersControllerTest {
             MyTeamOrdersController controller = new MyTeamOrdersController();
 
             // Verify that the sum of orders is 0 when there are no orders
+            Test.startTest();
             decimal expectedSum = 0.0;
             Assert.areEqual(expectedSum, controller.SumOrders, 'The sum of orders is incorrect for the Western Sales Team');
+            Test.stopTest();
         }
     }
 }
